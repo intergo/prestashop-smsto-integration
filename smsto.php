@@ -8,7 +8,7 @@ class SMSto extends Module
     public function __construct()
     {
         $this->name = 'smsto';
-        $this->tab = 'front_office_features';
+        $this->tab = 'advertising_marketing';
         $this->version = '1.0.0';
         $this->author = 'Intergo Telecom Ltd';
         $this->need_instance = 0;
@@ -16,7 +16,7 @@ class SMSto extends Module
             'min' => '1.7',
             'max' => '1.7.99',
         ];
-        $this->bootstrap = false;
+        $this->bootstrap = true;
 
         parent::__construct();
 
@@ -30,5 +30,178 @@ class SMSto extends Module
         if (!Configuration::get('SMSTO_NAME')) {
             $this->warning = $this->l('No name provided');
         }
+    }
+
+    public function install()
+    {
+        $this->_clearCache('*');
+
+        return parent::install()
+        && Configuration::updateValue('SMSTO_SHOW_REPORTS', 1)
+        && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1);
+    }
+
+    public function uninstall()
+    {
+        $this->_clearCache('*');
+
+        return parent::uninstall()
+        && Configuration::deleteByName('SMSTO_SHOW_REPORTS')
+        && Configuration::deleteByName('SMSTO_SHOW_PEOPLE');
+    }
+
+    /**
+     * This method handles the module's configuration page
+     * @return string The page's HTML content 
+     */
+    public function getContent()
+    {
+        $output = '';
+
+        // this part is executed only when the form is submitted
+        if (Tools::isSubmit('submit' . $this->name)) {
+            $value = (string) Tools::getValue('SMSTO_API_KEY');
+            if (empty($value) || !Validate::isPasswdAdmin($value)) {
+                $output = $this->displayError($this->l('Invalid API key value'));
+            } else {
+                Configuration::updateValue('SMSTO_API_KEY', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (string) Tools::getValue('SMSTO_SENDER_ID');
+            if (!Validate::isGenericName($value)) {
+                $output = $this->displayError($this->l('Invalid Sender value'));
+            } else {
+                Configuration::updateValue('SMSTO_SENDER_ID', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (string) Tools::getValue('SMSTO_PHONE');
+            if (!Validate::isPhoneNumber($value)) {
+                $output = $this->displayError($this->l('Invalid Phone value'));
+            } else {
+                Configuration::updateValue('SMSTO_PHONE', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (bool) Tools::getValue('SMSTO_SHOW_REPORTS');
+            if (!Validate::isBool($value)) {
+                $output = $this->displayError($this->l('Invalid Show Reports value'));
+            } else {
+                Configuration::updateValue('SMSTO_SHOW_REPORTS', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (bool) Tools::getValue('SMSTO_SHOW_PEOPLE');
+            if (!Validate::isBool($value)) {
+                $output = $this->displayError($this->l('Invalid Show People value'));
+            } else {
+                Configuration::updateValue('SMSTO_SHOW_PEOPLE', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+        }
+
+        // display any message, then the form
+        return $output . $this->displayForm();
+    }
+
+    /**
+     * Builds the configuration form
+     * @return string HTML code
+     */
+    public function displayForm()
+    {
+        // Init Fields form array
+        $form = [
+            'form' => [
+                'legend' => [
+                    'title' => $this->l('Settings'),
+                ],
+                'input' => [
+                    [
+                        'type' => 'password',
+                        'label' => $this->l('API key'),
+                        'desc' => 'To make successful API requests, you need a <a href="https://support.sms.to/en/support/solutions/articles/43000571250-account-creation-verification" target="_blank">verified account on SMS.to</a> and to authorize the API calls using your api key.<br>You can generate, retrieve and manage your <em>API keys</em> or <em>Client IDs &amp; Secrets</em> in your <a href="https://sms.to/app" target="_blank">SMS.to dashboard</a> under the <a href="https://sms.to/app#/api/client" target="_blank">API Clients</a> section.',
+                        'name' => 'SMSTO_API_KEY',
+                        'required' => true,
+                    ],
+                    [
+                        'type' => 'text',
+                        'label' => $this->l('Sender'),
+                        'desc' => 'The displayed value of who sent the message <a href="https://intergo.freshdesk.com/a/solutions/articles/43000513909" target="_blank">More info</a>',
+                        'name' => 'SMSTO_SENDER_ID',
+                    ],
+                    [
+                        'type' => 'text',
+                        'label' => $this->l('Phone'),
+                        'desc' => 'The phone to receive the SMS notifications upon new orders. Please add a full number e.g. +35799999999999, or leave empty if you do not want to receive notifications when a new order is placed.',
+                        'name' => 'SMSTO_PHONE',
+                        'placeholder' => '+35799999999999'
+                    ],
+                    [
+                        'type' => 'switch',
+                        'label' => $this->l('Show Reports'),
+                        'name' => 'SMSTO_SHOW_REPORTS',
+                        'is_bool' => true,
+                        'default' => true,
+                        'values' => [
+                            [
+                                'id' => 'SMSTO_SHOW_REPORTS_on',
+                                'value' => 1,
+                                'label' => $this->trans('Yes', [], 'Admin.Global')
+                            ],
+                            [
+                                'id' => 'SMSTO_SHOW_REPORTS_off',
+                                'value' => 0,
+                                'label' => $this->trans('No', [], 'Admin.Global')
+                            ]
+                        ]
+                    ],
+                    [
+                        'type' => 'switch',
+                        'label' => $this->l('Show Contacts & Lists'),
+                        'name' => 'SMSTO_SHOW_PEOPLE',
+                        'is_bool' => true,
+                        'values' => [
+                            [
+                                'id' => 'SMSTO_SHOW_PEOPLE_on',
+                                'value' => 1,
+                                'label' => $this->trans('Yes', [], 'Admin.Global')
+                            ],
+                            [
+                                'id' => 'SMSTO_SHOW_PEOPLE_off',
+                                'value' => 0,
+                                'label' => $this->trans('No', [], 'Admin.Global')
+                            ]
+                        ]
+                    ],
+                ],
+                'submit' => [
+                    'title' => $this->l('Save'),
+                    'class' => 'btn btn-default pull-right',
+                ],
+            ],
+        ];
+
+        $helper = new HelperForm();
+
+        // Module, token and currentIndex
+        $helper->table = $this->table;
+        $helper->name_controller = $this->name;
+        $helper->token = Tools::getAdminTokenLite('AdminModules');
+        $helper->currentIndex = AdminController::$currentIndex . '&' . http_build_query(['configure' => $this->name]);
+        $helper->submit_action = 'submit' . $this->name;
+
+        // Default language
+        $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
+
+        // Load current value into the form
+        $helper->fields_value['SMSTO_API_KEY'] = Tools::getValue('SMSTO_API_KEY', Configuration::get('SMSTO_API_KEY'));
+        $helper->fields_value['SMSTO_SENDER_ID'] = Tools::getValue('SMSTO_SENDER_ID', Configuration::get('SMSTO_SENDER_ID'));
+        $helper->fields_value['SMSTO_PHONE'] = Tools::getValue('SMSTO_PHONE', Configuration::get('SMSTO_PHONE'));
+        $helper->fields_value['SMSTO_SHOW_REPORTS'] = Tools::getValue('SMSTO_SHOW_REPORTS', Configuration::get('SMSTO_SHOW_REPORTS'));
+        $helper->fields_value['SMSTO_SHOW_PEOPLE'] = Tools::getValue('SMSTO_SHOW_PEOPLE', Configuration::get('SMSTO_SHOW_PEOPLE'));
+
+        return $helper->generateForm([$form]);
     }
 }
