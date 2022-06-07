@@ -3,3 +3,9 @@ ps_controller_smsto_index_tab:
     methods: [GET]
     defaults:
         _controller: 'PrestaShop\Module\Smsto\Controller\Admin\IndexController::indexAction'
+
+ps_controller_smsto_iframe_tab:
+    path: /smsto/iframe
+    methods: [GET]
+    defaults:
+        _controller: 'PrestaShop\Module\Smsto\Controller\Admin\IndexController::iframeAction'

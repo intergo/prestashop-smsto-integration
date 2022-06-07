@@ -1,0 +1,21 @@
+    {% extends '@PrestaShop/Admin/layout.html.twig' %}
+
+    {% block controllerTitle %}{{ 'Manual Tab controller' }}{% endblock %}
+
+    {% block content %}
+    <div class="row justify-content-center wishlist-stats">
+        <div class="col-xl-12">
+          <div class="card">
+            <h3 class="card-header">
+              <i class="material-icons">sms</i> SMSto
+            </h3>
+    
+            <div class="card-body">
+              <div class="card-text">
+                <iframe id='smstoiframe' src="{{ path('ps_controller_smsto_iframe_tab') }}" frameborder="0" width="100%" height="800"></iframe>               
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endblock %}

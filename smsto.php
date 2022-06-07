@@ -213,4 +213,5 @@ class SMSto extends Module
 
         return $helper->generateForm([$form]);
     }
+
 }
