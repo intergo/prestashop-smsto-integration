@@ -1,0 +1,22 @@
+{
+  "name": "smsto/prestashop",
+  "license": "OSL-3.0",
+  "authors": [
+    {
+      "name": "Intergo Telecom Ltd",
+      "email": "support@sms.to"
+    },
+    {
+        "name": "SMSto - Integration Module"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "PrestaShop\\Module\\Smsto\\": "src/"
+    },
+    "config": {
+      "prepend-autoloader": false
+    },
+    "type": "prestashop-module"
+  }
+}

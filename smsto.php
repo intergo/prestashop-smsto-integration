@@ -23,6 +23,17 @@ class SMSto extends Module
         $this->displayName = $this->l('SMSto - Integration Module');
         $this->description = $this->l('The SMSto SMS Integration is an integration with the PrestaShop e-commerce platform. This Integration enables PrestaShop store admins to configure automated SMS notifications to the administrator and customers for important order status updates, and also allows sending bulk SMS messages to customers. The Integration is free, but a SMSto account is required to send messages. Signup with our service is free as well, and you pay only for the SMS messages. The Integration offers great flexibility, in sending individual SMS or bulk SMS messages to various groups.');
 
+        $this->tabs = [
+            [
+                'route_name' => 'ps_controller_smsto_index_tab',
+                'class_name' => 'AdminSmstoControllerIndexTab',
+                'visible' => true,
+                'name' => 'SMSto',
+                'icon' => 'sms',
+                'parent_class_name' => 'IMPROVE',
+            ],
+        ];
+
         $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
 
         if (!Configuration::get('SMSTO_NAME')) {
