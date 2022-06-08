@@ -1,4 +1,7 @@
 <?php
+
+use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
+
 if (!defined('_PS_VERSION_')) {
     exit;
 }
@@ -48,6 +51,7 @@ class SMSto extends Module
         return parent::install()
         && Configuration::updateValue('SMSTO_SHOW_REPORTS', 1)
         && $this->registerHook('displayHome')
+        && $this->registerHook('actionCustomerGridDefinitionModifier')
         && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1);
     }
 
@@ -213,6 +217,26 @@ class SMSto extends Module
         $helper->fields_value['SMSTO_SHOW_PEOPLE'] = Tools::getValue('SMSTO_SHOW_PEOPLE', Configuration::get('SMSTO_SHOW_PEOPLE'));
 
         return $helper->generateForm([$form]);
+    }
+
+    /**
+     * This hook displays a new block on the admin customer page
+     *
+     * @param array $params
+     *
+     * @return string
+     */
+    public function hookActionCustomerGridDefinitionModifier(array $params)
+    {
+        // $params['definition'] is instance of \PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinition
+        $params['definition']->getBulkActions()->add(
+                (new SubmitBulkAction('send_sms'))
+                    ->setName('SMS')
+                    ->setOptions([
+                        // in most cases submit action should be implemented by module
+                        'submit_route' => 'ps_controller_smsto_index_tab',
+                    ]) 
+            );
     }
 
 }

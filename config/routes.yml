@@ -1,6 +1,6 @@
 ps_controller_smsto_index_tab:
     path: /smsto
-    methods: [GET]
+    methods: [GET,POST]
     defaults:
         _controller: 'PrestaShop\Module\Smsto\Controller\Admin\IndexController::indexAction'
 
