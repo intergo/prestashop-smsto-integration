@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\Smsto\Controller\Admin;
 
+use Configuration;
+use Context;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
 use PrestaShopBundle\Security\Annotation\AdminSecurity;
 use Symfony\Component\HttpClient\HttpClient;
@@ -32,13 +34,12 @@ class IndexController extends FrameworkBundleAdminController
         $client = HttpClient::createForBaseUri('https://integration.sms.to');
         $response = $client->request('GET', '/component_bulk_sms/manifest.json');
         $manifest = json_decode($response->getContent(), true);
-        //$VITE_ROUTE_PARAMS =  Uri::root() . "index.php?option=com_smsto&task=smsto.getParams";
-        //$VITE_ROUTE_SMSTO =  Uri::root() . "index.php?option=com_smsto&task=smsto.callSmsto";
         $params = [
             'script_main' => $manifest['src/main.ts']['file'],
             'asset_main' => $manifest['src/main.ts']['css'][0],
-            'VITE_ROUTE_PARAMS' => 'aaaaaaaa',
-            'VITE_ROUTE_SMSTO' => 'bbbbbbbb',
+            'VITE_ROUTE_PARAMS' => Context::getContext()->link->getModuleLink('smsto', 'params'),
+            'VITE_ROUTE_SMSTO' => Context::getContext()->link->getModuleLink('smsto', 'call'),
+            'sender_id' => (string) Configuration::get('SMSTO_SENDER_ID')
         ];
         return $this->render('@Modules/smsto/views/templates/admin/iframe.html.twig', $params);
     }

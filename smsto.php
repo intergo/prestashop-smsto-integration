@@ -47,6 +47,7 @@ class SMSto extends Module
 
         return parent::install()
         && Configuration::updateValue('SMSTO_SHOW_REPORTS', 1)
+        && $this->registerHook('displayHome')
         && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1);
     }
 
@@ -70,7 +71,7 @@ class SMSto extends Module
         // this part is executed only when the form is submitted
         if (Tools::isSubmit('submit' . $this->name)) {
             $value = (string) Tools::getValue('SMSTO_API_KEY');
-            if (empty($value) || !Validate::isPasswdAdmin($value)) {
+            if (empty($value)) {
                 $output = $this->displayError($this->l('Invalid API key value'));
             } else {
                 Configuration::updateValue('SMSTO_API_KEY', $value);
