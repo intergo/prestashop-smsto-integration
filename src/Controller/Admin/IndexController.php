@@ -10,6 +10,7 @@ use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
 use PrestaShopBundle\Security\Annotation\AdminSecurity;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpFoundation\Response;
+use Tools;
 
 class IndexController extends FrameworkBundleAdminController
 {
@@ -39,7 +40,9 @@ class IndexController extends FrameworkBundleAdminController
             'asset_main' => $manifest['src/main.ts']['css'][0],
             'VITE_ROUTE_PARAMS' => Context::getContext()->link->getModuleLink('smsto', 'params'),
             'VITE_ROUTE_SMSTO' => Context::getContext()->link->getModuleLink('smsto', 'call'),
-            'sender_id' => (string) Configuration::get('SMSTO_SENDER_ID')
+            'sender_id' => Configuration::get('SMSTO_SENDER_ID'),
+            'active_tab' => Tools::getValue('active_tab') ? Tools::getValue('active_tab') :  'single',
+            'to' => Tools::getValue('to') ? Tools::getValue('to') :  '',
         ];
         return $this->render('@Modules/smsto/views/templates/admin/iframe.html.twig', $params);
     }
