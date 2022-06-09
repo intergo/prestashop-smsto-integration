@@ -6,6 +6,8 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+include_once dirname(__FILE__) . '/SmsAlert.php';
+
 class SMSto extends Module
 {
     public function __construct()
@@ -50,9 +52,11 @@ class SMSto extends Module
 
         return parent::install()
         && Configuration::updateValue('SMSTO_SHOW_REPORTS', 1)
+        && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1)
+        && Configuration::updateValue('SMSTO_NEW_ORDER', 1)
         && $this->registerHook('displayHome')
         && $this->registerHook('actionCustomerGridDefinitionModifier')
-        && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1);
+        && $this->registerHook('actionValidateOrder');
     }
 
     public function uninstall()
@@ -61,7 +65,8 @@ class SMSto extends Module
 
         return parent::uninstall()
         && Configuration::deleteByName('SMSTO_SHOW_REPORTS')
-        && Configuration::deleteByName('SMSTO_SHOW_PEOPLE');
+        && Configuration::deleteByName('SMSTO_SHOW_PEOPLE')
+        && Configuration::deleteByName('SMSTO_NEW_ORDER');
     }
 
     /**
@@ -111,6 +116,14 @@ class SMSto extends Module
                 $output = $this->displayError($this->l('Invalid Show People value'));
             } else {
                 Configuration::updateValue('SMSTO_SHOW_PEOPLE', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (bool) Tools::getValue('SMSTO_NEW_ORDER');
+            if (!Validate::isBool($value)) {
+                $output = $this->displayError($this->l('Invalid Show People value'));
+            } else {
+                Configuration::updateValue('SMSTO_NEW_ORDER', $value);
                 $output = $this->displayConfirmation($this->l('Settings updated'));
             }
         }
@@ -189,6 +202,25 @@ class SMSto extends Module
                             ]
                         ]
                     ],
+                    [
+                        'type' => 'switch',
+                        'label' => $this->l('New Order Notification'),
+                        'desc' => $this->l('Send SMS notifications upon new order'),
+                        'name' => 'SMSTO_NEW_ORDER',
+                        'is_bool' => true,
+                        'values' => [
+                            [
+                                'id' => 'SMSTO_NEW_ORDER_on',
+                                'value' => 1,
+                                'label' => $this->trans('Yes', [], 'Admin.Global')
+                            ],
+                            [
+                                'id' => 'SMSTO_NEW_ORDER_off',
+                                'value' => 0,
+                                'label' => $this->trans('No', [], 'Admin.Global')
+                            ]
+                        ]
+                    ],
                 ],
                 'submit' => [
                     'title' => $this->l('Save'),
@@ -215,6 +247,7 @@ class SMSto extends Module
         $helper->fields_value['SMSTO_PHONE'] = Tools::getValue('SMSTO_PHONE', Configuration::get('SMSTO_PHONE'));
         $helper->fields_value['SMSTO_SHOW_REPORTS'] = Tools::getValue('SMSTO_SHOW_REPORTS', Configuration::get('SMSTO_SHOW_REPORTS'));
         $helper->fields_value['SMSTO_SHOW_PEOPLE'] = Tools::getValue('SMSTO_SHOW_PEOPLE', Configuration::get('SMSTO_SHOW_PEOPLE'));
+        $helper->fields_value['SMSTO_NEW_ORDER'] = Tools::getValue('SMSTO_NEW_ORDER', Configuration::get('SMSTO_NEW_ORDER'));
 
         return $helper->generateForm([$form]);
     }
@@ -237,6 +270,98 @@ class SMSto extends Module
                         'submit_route' => 'ps_controller_smsto_index_tab',
                     ]) 
             );
+    }
+
+    /**
+     * After an order has been validated. Doesn’t necessarily have to be paid.
+     *
+     * @param array $params
+     * @return void
+     */
+    public function hookActionValidateOrder($params)
+    {
+        if (!(bool) Configuration::get('SMSTO_NEW_ORDER')) {
+            return;
+        }
+
+        // Getting differents vars
+        $context = Context::getContext();
+        $id_lang = (int) $context->language->id;
+
+        $id_shop = (int) $context->shop->id;
+        $order = $params['order'];
+        $customer = $params['customer'];
+        $PS_SHOP_NAME = Configuration::get('PS_SHOP_NAME', $id_lang, null, $id_shop);
+        $delivery = new Address((int) $order->id_address_delivery);
+        $invoice = new Address((int) $order->id_address_invoice);
+        $order_state = $params['orderStatus'];
+
+        // customer notification
+        $api_key = (string) Configuration::get('SMSTO_API_KEY');
+        $phones = [];        
+        $delivery_phone = $delivery->phone ? $delivery->phone : $delivery->phone_mobile;
+        if (!empty($delivery_phone)) {
+            $phones[] = $delivery_phone;
+        }
+        $invoice_phone = $invoice->phone ? $invoice->phone : $invoice->phone_mobile;
+        if (!empty($invoice_phone)) {
+            $phones[] = $invoice_phone;
+        }
+        if (empty($phones)) {
+            return;
+        }
+        $to = $phones[0];
+        if (count($phones) > 1) {
+            $to = $phones;
+        }
+        $order_history = Context::getContext()->link->getPageLink(
+            'my-account',
+            true,
+            $id_lang,
+            null,
+            false,
+            $id_shop
+        );
+        $payload = [
+            'to' => $to,
+            'sender_id' => (string) Configuration::get('SMSTO_SENDER_ID'),
+            'message' => "Hi $customer->firstname $customer->lastname," . PHP_EOL .
+                "Thank you for shopping on $PS_SHOP_NAME" . PHP_EOL . PHP_EOL .
+                "Order details" . PHP_EOL .
+                "Order: $order->reference" . PHP_EOL .
+                "Status: $order_state->name" . PHP_EOL .
+                "Follow your order and download your invoice on our shop. Go to $order_history"
+        ];
+        SmsAlert::callSmsto($api_key, 'POST', 'https://api.sms.to/sms/send', $payload);
+
+        //admin notification
+        $admin_phone = (string) Configuration::get('SMSTO_PHONE');
+        if (!empty($admin_phone)) {
+            $payload = [
+                'to' => $admin_phone,
+                'sender_id' => (string) Configuration::get('SMSTO_SENDER_ID'),
+                'message' => "You have a new order on $PS_SHOP_NAME" . PHP_EOL .
+                    "Order details" . PHP_EOL .
+                    "Order: $order->reference" . PHP_EOL .
+                    "Status: $order_state->name"
+            ];
+            SmsAlert::callSmsto($api_key, 'POST', 'https://api.sms.to/sms/send', $payload);
+        }
+    }
+
+    public function getAllMessages($id)
+    {
+        $messages = Db::getInstance()->executeS('
+			SELECT `message`
+			FROM `' . _DB_PREFIX_ . 'message`
+			WHERE `id_order` = ' . (int) $id . '
+			ORDER BY `id_message` ASC');
+        $result = [];
+        foreach ($messages as $message) {
+            $result[] = $message['message'];
+        }
+
+        return implode('<br/>', $result);
     }
 
 }
