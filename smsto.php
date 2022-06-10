@@ -54,9 +54,11 @@ class SMSto extends Module
         && Configuration::updateValue('SMSTO_SHOW_REPORTS', 1)
         && Configuration::updateValue('SMSTO_SHOW_PEOPLE', 1)
         && Configuration::updateValue('SMSTO_NEW_ORDER', 1)
+        && Configuration::updateValue('SMSTO_UPDATE_ORDER', 1)
         && $this->registerHook('displayHome')
         && $this->registerHook('actionCustomerGridDefinitionModifier')
-        && $this->registerHook('actionValidateOrder');
+        && $this->registerHook('actionValidateOrder')
+        && $this->registerHook('actionOrderHistoryAddAfter');
     }
 
     public function uninstall()
@@ -66,7 +68,8 @@ class SMSto extends Module
         return parent::uninstall()
         && Configuration::deleteByName('SMSTO_SHOW_REPORTS')
         && Configuration::deleteByName('SMSTO_SHOW_PEOPLE')
-        && Configuration::deleteByName('SMSTO_NEW_ORDER');
+        && Configuration::deleteByName('SMSTO_NEW_ORDER')
+        && Configuration::deleteByName('SMSTO_UPDATE_ORDER');
     }
 
     /**
@@ -121,9 +124,17 @@ class SMSto extends Module
 
             $value = (bool) Tools::getValue('SMSTO_NEW_ORDER');
             if (!Validate::isBool($value)) {
-                $output = $this->displayError($this->l('Invalid Show People value'));
+                $output = $this->displayError($this->l('Invalid New Order value'));
             } else {
                 Configuration::updateValue('SMSTO_NEW_ORDER', $value);
+                $output = $this->displayConfirmation($this->l('Settings updated'));
+            }
+
+            $value = (bool) Tools::getValue('SMSTO_UPDATE_ORDER');
+            if (!Validate::isBool($value)) {
+                $output = $this->displayError($this->l('Invalid Update Order value'));
+            } else {
+                Configuration::updateValue('SMSTO_UPDATE_ORDER', $value);
                 $output = $this->displayConfirmation($this->l('Settings updated'));
             }
         }
@@ -221,6 +232,25 @@ class SMSto extends Module
                             ]
                         ]
                     ],
+                    [
+                        'type' => 'switch',
+                        'label' => $this->l('Order Status Change Notification'),
+                        'desc' => $this->l('Send SMS notifications upon order status change'),
+                        'name' => 'SMSTO_UPDATE_ORDER',
+                        'is_bool' => true,
+                        'values' => [
+                            [
+                                'id' => 'SMSTO_UPDATE_ORDER_on',
+                                'value' => 1,
+                                'label' => $this->trans('Yes', [], 'Admin.Global')
+                            ],
+                            [
+                                'id' => 'SMSTO_UPDATE_ORDER_off',
+                                'value' => 0,
+                                'label' => $this->trans('No', [], 'Admin.Global')
+                            ]
+                        ]
+                    ],
                 ],
                 'submit' => [
                     'title' => $this->l('Save'),
@@ -248,6 +278,7 @@ class SMSto extends Module
         $helper->fields_value['SMSTO_SHOW_REPORTS'] = Tools::getValue('SMSTO_SHOW_REPORTS', Configuration::get('SMSTO_SHOW_REPORTS'));
         $helper->fields_value['SMSTO_SHOW_PEOPLE'] = Tools::getValue('SMSTO_SHOW_PEOPLE', Configuration::get('SMSTO_SHOW_PEOPLE'));
         $helper->fields_value['SMSTO_NEW_ORDER'] = Tools::getValue('SMSTO_NEW_ORDER', Configuration::get('SMSTO_NEW_ORDER'));
+        $helper->fields_value['SMSTO_UPDATE_ORDER'] = Tools::getValue('SMSTO_UPDATE_ORDER', Configuration::get('SMSTO_UPDATE_ORDER'));
 
         return $helper->generateForm([$form]);
     }
@@ -362,6 +393,66 @@ class SMSto extends Module
         }
 
         return implode('<br/>', $result);
+    }
+
+    /**
+     * Send a mail when an order is modified.
+     *
+     * @param array $params Hook params
+     */
+    public function hookActionOrderHistoryAddAfter($params)
+    {
+        if (!(bool) Configuration::get('SMSTO_UPDATE_ORDER')) {
+            return;
+        }
+
+        $context = Context::getContext();
+        $id_lang = (int) $context->language->id;
+        $id_shop = (int) $context->shop->id;
+        $PS_SHOP_NAME = Configuration::get('PS_SHOP_NAME', $id_lang, null, $id_shop);
+        $order = new Order((int) $params['order_history']->id_order);
+        $order_state = new OrderState((int) $params['order_history']->id_order_state);
+        $customer = new Customer((int) $order->id_customer);
+        $delivery = new Address((int) $order->id_address_delivery);
+        $invoice = new Address((int) $order->id_address_invoice);
+        
+        // customer notification
+        $api_key = (string) Configuration::get('SMSTO_API_KEY');
+        $phones = [];        
+        $delivery_phone = $delivery->phone ? $delivery->phone : $delivery->phone_mobile;
+        if (!empty($delivery_phone)) {
+            $phones[] = $delivery_phone;
+        }
+        $invoice_phone = $invoice->phone ? $invoice->phone : $invoice->phone_mobile;
+        if (!empty($invoice_phone)) {
+            $phones[] = $invoice_phone;
+        }
+        if (empty($phones)) {
+            return;
+        }
+        $to = $phones[0];
+        if (count($phones) > 1) {
+            $to = $phones;
+        }
+        $order_history = Context::getContext()->link->getPageLink(
+            'my-account',
+            true,
+            $id_lang,
+            null,
+            false,
+            $id_shop
+        );
+        $payload = [
+            'to' => $to,
+            'sender_id' => (string) Configuration::get('SMSTO_SENDER_ID'),
+            'message' => "Hi $customer->firstname $customer->lastname," . PHP_EOL .
+                "Your order status on $PS_SHOP_NAME is modified." . PHP_EOL . PHP_EOL .
+                "Order details" . PHP_EOL .
+                "Order: $order->reference" . PHP_EOL .
+                "Status: " . $order_state->name[1] . PHP_EOL .
+                "Follow your order on $order_history"
+        ];
+        SmsAlert::callSmsto($api_key, 'POST', 'https://api.sms.to/sms/send', $payload);
     }
 
 }
