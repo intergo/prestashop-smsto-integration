@@ -26,4 +26,4 @@ That's it!!!
 
 Navigate to **prestashop/html/modules** and run `./build.sh`
 
-This will create file **smsto.zip** that is distributed. Attach this file when creating a new GitHub release.
+This will create file **smsto.zip** that is used for distribution. Attach this file when creating a new GitHub release.
