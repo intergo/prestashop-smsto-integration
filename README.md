@@ -21,3 +21,9 @@ To create a working docker environment follow below steps. Note that you need to
 * Navigate to **prestashop/docker** and run `docker-compose up -d --build`
 
 That's it!!!
+
+## How to make a new release
+
+Navigate to **prestashop/html/modules** and run `./build.sh`
+
+This will create file **smsto.zip** that is distributed. Attach this file when creating a new GitHub release.
