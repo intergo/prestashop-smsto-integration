@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+
+  prestashop:
+    container_name: ${COMPOSE_PROJECT_NAME}_${COMPOSE_SUB_DOMAIN}
+    build: .
+    hostname: ${COMPOSE_SUB_DOMAIN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${COMPOSE_NETWORK_NAME}_${COMPOSE_SUB_DOMAIN}.rule=Host(`${COMPOSE_SUB_DOMAIN}.${COMPOSE_BASE_DOMAIN}`)"
+      - "traefik.http.routers.${COMPOSE_NETWORK_NAME}_${COMPOSE_SUB_DOMAIN}.tls=true"
+      - "traefik.http.routers.${COMPOSE_NETWORK_NAME}_${COMPOSE_SUB_DOMAIN}.entrypoints=websecure"
+    volumes:
+      - ../html/:/var/www/html/:rw
+
+networks:
+  default:
+    name: ${COMPOSE_NETWORK_NAME}-local-net
+    driver: bridge
