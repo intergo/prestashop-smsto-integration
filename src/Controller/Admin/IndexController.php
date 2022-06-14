@@ -83,9 +83,13 @@ class IndexController extends FrameworkBundleAdminController
      */
     public function iframeAction()
     {
-        $client = HttpClient::createForBaseUri('https://integration.sms.to');
-        $response = $client->request('GET', '/component_bulk_sms/manifest.json');
-        $manifest = json_decode($response->getContent(), true);
+        $ch = curl_init();
+        ob_start();
+        curl_setopt($ch, CURLOPT_URL, 'https://integration.sms.to/component_bulk_sms/manifest.json');
+        $response = curl_exec($ch);
+        curl_close($ch);
+        $response = ob_get_clean();
+        $manifest = json_decode($response, true);
         
         $to = Tools::getValue('to') ? json_decode(Tools::getValue('to'), true) :  '';
         if (!empty($to)) {
