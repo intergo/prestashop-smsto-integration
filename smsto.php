@@ -49,7 +49,7 @@ class SMSto extends Module
         parent::__construct();
 
         $this->displayName = $this->l('SMSto - Integration Module');
-        $this->description = $this->l('The SMSto SMS Integration is an integration with the PrestaShop e-commerce platform. This Integration enables PrestaShop store admins to configure automated SMS notifications to the administrator and customers for important order status updates, and also allows sending bulk SMS messages to customers. The Integration is free, but a SMSto account is required to send messages. Signup with our service is free as well, and you pay only for the SMS messages. The Integration offers great flexibility, in sending individual SMS or bulk SMS messages to various groups.');
+        $this->description = $this->l('SMSto integration enables PrestaShop automated SMS notifications to store administrator and customers for important order status updates, and also allows sending bulk SMS messages to customers. The Integration is free, but a SMSto account is required to send messages. Signup with our service is free as well, and you pay only for the SMS messages.');
 
         $this->tabs = [
             [
