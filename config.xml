@@ -3,7 +3,7 @@
     <name>smsto</name>
     <displayName><![CDATA[SMSto - Integration Module]]></displayName>
     <version><![CDATA[1.0.0]]></version>
-    <description><![CDATA[The SMSto SMS Integration is an integration with the PrestaShop e-commerce platform. This Integration enables PrestaShop store admins to configure automated SMS notifications to the administrator and customers for important order status updates, and also allows sending bulk SMS messages to customers. The Integration is free, but a SMSto account is required to send messages. Signup with our service is free as well, and you pay only for the SMS messages. The Integration offers great flexibility, in sending individual SMS or bulk SMS messages to various groups.]]></description>
+    <description><![CDATA[SMSto integration enables PrestaShop automated SMS notifications to store administrator and customers for important order status updates, and also allows sending bulk SMS messages to customers. The Integration is free, but a SMSto account is required to send messages. Signup with our service is free as well, and you pay only for the SMS messages.]]></description>
     <author><![CDATA[Intergo Telecom Ltd]]></author>
     <tab><![CDATA[advertising_marketing]]></tab>
     <confirmUninstall>Are you sure you want to uninstall?</confirmUninstall>
