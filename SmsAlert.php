@@ -52,6 +52,7 @@ class SmsAlert extends ObjectModel
                 "Authorization: Bearer $api_key",
                 'Content-Type: application/json',
                 'Accept: application/json',
+                'X-Smsto-Integration-Name: prestashop',
             ],
         ];
 
